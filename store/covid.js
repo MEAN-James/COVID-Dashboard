@@ -35,6 +35,14 @@ export const actions = {
     commit('SET_COVID_DATA', res.data)
     commit('SET_LOADING', false)
   },
+  async searchCovidData({ commit, state }, query) {
+    const res = await this.$axios.$get(
+      `${baseUrl}?search=${query}&limit=${state.limit}`
+    )
+    if (res.data.rows.length !== 0) {
+      commit('SET_COVID_DATA', res.data)
+    }
+  },
   async loadRequestedPage({ commit, state }, page) {
     commit('SET_LOADING', true)
     commit('SET_STATUS', 'loading')

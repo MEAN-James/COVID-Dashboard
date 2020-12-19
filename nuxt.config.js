@@ -17,7 +17,7 @@ export default {
   css: [],
 
   // Plugins to run before rendering page (https://go.nuxtjs.dev/config-plugins)
-  plugins: [],
+  plugins: [{ src: '~/plugins/underscore', ssr: false }],
 
   // Auto import components (https://go.nuxtjs.dev/config-components)
   components: true,
@@ -53,13 +53,20 @@ export default {
       dark: true,
       themes: {
         dark: {
-          primary: colors.blue.darken2,
-          accent: colors.grey.darken3,
-          secondary: colors.amber.darken3,
-          info: colors.teal.lighten1,
+          data: {
+            first: colors.teal.base,
+            second: colors.teal.accent4,
+            third: colors.teal.accent3,
+            fourth: colors.teal.accent2,
+            fifth: colors.teal.accent1,
+          },
+          primary: colors.teal.base,
+          secondary: colors.cyan.base,
+          accent: colors.deepOrange.base,
+          error: colors.red.base,
           warning: colors.amber.base,
-          error: colors.deepOrange.accent4,
-          success: colors.green.accent3,
+          info: colors.lightBlue.base,
+          success: colors.green.base,
         },
       },
     },

@@ -1,31 +1,39 @@
 <template>
   <div>
-    <v-overlay :value="status === 'loading'" absolute>
-      <v-card class="text-center">
-        <v-card-text>
-          <v-progress-circular
-            class="mb-4"
-            color="primary"
-            indeterminate
-            size="250"
-            width="25"
-          />
-          <h2>Loading...</h2>
-        </v-card-text>
-      </v-card>
-    </v-overlay>
+    <v-card v-if="status === 'loading'" height="750">
+      <v-toolbar>
+        <v-spacer></v-spacer>
+        <v-toolbar-title>Loading Data...</v-toolbar-title>
+        <v-spacer></v-spacer>
+      </v-toolbar>
+      <v-card-text class="text-center full-height">
+        <v-progress-circular
+          color="primary"
+          indeterminate
+          size="325"
+          width="20"
+        />
+      </v-card-text>
+    </v-card>
     <v-card v-if="!loading && status === 'success'">
       <v-toolbar>
         <v-toolbar-title>COVID-19 General Stats</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn icon>
-          <v-icon>mdi-magnify</v-icon>
-        </v-btn>
+        <v-text-field
+          append-icon="mdi-magnify"
+          label="search"
+          hide-details
+          outlined
+          rounded
+          single-line
+          dense
+          @input="search"
+        />
         <v-btn icon>
           <v-icon>mdi-help</v-icon>
         </v-btn>
         <template v-slot:extension>
-          <v-tabs v-model="tabs" fixed-tabs>
+          <v-tabs v-model="tabs" fixed-tabs color="primary">
             <v-tab href="#graph-tab">Graph</v-tab>
             <v-tab href="#table-tab">Table</v-tab>
           </v-tabs>
@@ -47,7 +55,7 @@
               :items="tableRows"
               :items-per-page="limitResults"
               :hide-default-footer="true"
-              :height="500"
+              :height="400"
               fixed-header
             ></v-data-table>
           </v-tab-item>
@@ -82,6 +90,7 @@
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
+
 export default {
   data() {
     return {
@@ -140,40 +149,49 @@ export default {
     },
   },
   async mounted() {
+    this.searchDebouncer = this.$_.debounce(async (val) => {
+      await this.searchCovidData(val)
+      this.formatData()
+    }, 250)
     await this.loadCovidData()
     this.formatData()
   },
   methods: {
     ...mapActions('covid', [
       'loadCovidData',
+      'searchCovidData',
       'loadRequestedPage',
       'changeSearchLimit',
     ]),
+    search(val) {
+      this.searchDebouncer(val)
+    },
     formatData() {
       // Rewritethis to just reformat the entire result to convert all numeric strings to a Number
+      const dataColors = this.$vuetify.theme.themes.dark.data
       const TotalCases = {
         label: 'Total Cases',
-        backgroundColor: '#0f9',
+        backgroundColor: dataColors.first,
         data: [],
       }
       const ActiveCases = {
         label: 'Active Cases',
-        backgroundColor: '#09f',
+        backgroundColor: dataColors.second,
         data: [],
       }
       const TotalRecovered = {
         label: 'Total Recovered',
-        backgroundColor: '#90f',
+        backgroundColor: dataColors.third,
         data: [],
       }
       const TotalDeaths = {
         label: 'Total Deaths',
-        backgroundColor: '#f09',
+        backgroundColor: dataColors.fourth,
         data: [],
       }
       const CasesPerPop = {
         label: 'Cases Per Million Population',
-        backgroundColor: '#f90',
+        backgroundColor: dataColors.fifth,
         data: [],
       }
       const chartData = {
@@ -194,6 +212,7 @@ export default {
 
       this.tableRows = []
       this.getQueryResults.map((stat) => {
+        const row = { ...stat }
         const totalCases = parseFloat(stat.total_cases.replace(/,/g, ''))
         const activeCases = parseFloat(stat.active_cases.replace(/,/g, ''))
         const totalRecovered = parseFloat(
@@ -203,6 +222,14 @@ export default {
         const casesPerPop = parseFloat(
           stat.cases_per_mill_pop.replace(/,/g, '')
         )
+        // Alternativly consider writting a custom sort function.
+        Object.entries(row).forEach(([key, value]) => {
+          value = value.replace(/,/g, '')
+          if (isNaN(value) === false) {
+            row[key] = parseFloat(value)
+          }
+        })
+        this.tableRows.push(row)
 
         TotalCases.data.push(totalCases)
         ActiveCases.data.push(activeCases)
@@ -210,8 +237,6 @@ export default {
         TotalDeaths.data.push(totalDeaths)
         CasesPerPop.data.push(casesPerPop)
         chartData.labels.push(stat.country)
-
-        this.tableRows.push(stat)
       })
       chartData.datasets.push(
         TotalCases,
@@ -231,3 +256,10 @@ export default {
   },
 }
 </script>
+
+<style>
+.full-height {
+  padding-top: calc(20%);
+  height: calc(100% - 4em);
+}
+</style>
