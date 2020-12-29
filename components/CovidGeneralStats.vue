@@ -1,6 +1,7 @@
 <template>
   <div>
-    <v-card v-if="status === 'loading'" height="750">
+    <h1>test</h1>
+    <!-- <v-card v-if="status === 'loading'" height="750">
       <v-toolbar>
         <v-spacer></v-spacer>
         <v-toolbar-title>Loading Data...</v-toolbar-title>
@@ -84,12 +85,12 @@
           </v-col>
         </v-row>
       </v-card-text>
-    </v-card>
+    </v-card> -->
   </div>
 </template>
 
 <script>
-import { mapState, mapGetters, mapActions } from 'vuex'
+import { mapActions } from 'vuex'
 
 export default {
   data() {
@@ -103,66 +104,16 @@ export default {
       tableRows: [],
     }
   },
-  computed: {
-    ...mapState('covid', ['loading', 'status']),
-    ...mapGetters('covid', [
-      'getPaginationMeta',
-      'getQueryResults',
-      'getLastUpdated',
-    ]),
-    currentPage() {
-      return this.getPaginationMeta.currentPage
-    },
-    currentPageSize() {
-      return this.getPaginationMeta.currentPageSize
-    },
-    totalPages() {
-      return this.getPaginationMeta.totalPages
-    },
-    visibleStats() {
-      return this.limitResults * this.currentPage
-    },
-    endVisibleStats() {
-      return this.visibleStats < 200 ? this.visibleStats : this.totalResults
-    },
-    totalResults() {
-      return this.getPaginationMeta.totalRecords
-    },
-    limitResultOptiions() {
-      const options = []
-      let option = 0
-      while (option < this.totalResults) {
-        option += 5
-        options.push(option)
-      }
-      return options
-    },
-  },
-  watch: {
-    async page(val) {
-      await this.loadRequestedPage(val)
-      this.formatData()
-    },
-    async limitResults(val) {
-      await this.changeSearchLimit(val)
-      this.formatData()
-    },
-  },
   async mounted() {
     this.searchDebouncer = this.$_.debounce(async (val) => {
       await this.searchCovidData(val)
       this.formatData()
     }, 250)
     await this.loadCovidData()
-    this.formatData()
+    // this.formatData()
   },
   methods: {
-    ...mapActions('covid', [
-      'loadCovidData',
-      'searchCovidData',
-      'loadRequestedPage',
-      'changeSearchLimit',
-    ]),
+    ...mapActions('covid', ['loadCovidData']),
     search(val) {
       this.searchDebouncer(val)
     },
