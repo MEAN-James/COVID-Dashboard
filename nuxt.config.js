@@ -47,9 +47,9 @@ export default {
   },
 
   proxy: {
-    '/api/': {
-      target: 'https://covidtracking.com/api',
-      pathRewrite: { '^/api/': '' },
+    '/novelCOVID': {
+      target: 'https://corona.lmao.ninja/v2',
+      pathRewrite: { '^/novelCOVID': '' },
     },
   },
 

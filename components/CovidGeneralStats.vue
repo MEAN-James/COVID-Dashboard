@@ -1,7 +1,6 @@
 <template>
   <div>
-    <h1>test</h1>
-    <!-- <v-card v-if="status === 'loading'" height="750">
+    <v-card v-if="status === 'loading'" height="750">
       <v-toolbar>
         <v-spacer></v-spacer>
         <v-toolbar-title>Loading Data...</v-toolbar-title>
@@ -40,7 +39,6 @@
           </v-tabs>
         </template>
       </v-toolbar>
-      <v-card-title> Last Updated: {{ getLastUpdated }}</v-card-title>
       <v-card-text>
         <v-tabs-items v-model="tabs">
           <v-tab-item value="graph-tab">
@@ -54,7 +52,7 @@
             <v-data-table
               :headers="tableHeaders"
               :items="tableRows"
-              :items-per-page="limitResults"
+              :items-per-page="limit"
               :hide-default-footer="true"
               :height="400"
               fixed-header
@@ -63,46 +61,71 @@
         </v-tabs-items>
         <v-row align="center" justify="center">
           <v-col cols="12">
-            <v-row justify="center">
-              {{ visibleStats - limitResults + 1 }}
-              - {{ endVisibleStats }} of
-              {{ totalResults }}
-            </v-row>
+            <v-row justify="center">{{ paginationInfo }}</v-row>
             <v-pagination
               v-model="page"
               class="d.flex justify-end"
-              :length="totalPages"
+              :length="pages"
               total-visible="6"
             />
           </v-col>
           <v-col cols="6">
             <v-select
-              v-model="limitResults"
-              :items="limitResultOptiions"
+              v-model="limit"
+              :items="limitResultOptions"
               label="Results Per Page"
               dense
             />
           </v-col>
         </v-row>
       </v-card-text>
-    </v-card> -->
+    </v-card>
   </div>
 </template>
 
 <script>
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   data() {
     return {
       tabs: 'graph-tab',
       page: 1,
-      limitResults: 10,
       chartData: {},
       chartOptions: {},
       tableHeaders: [],
       tableRows: [],
     }
+  },
+  computed: {
+    ...mapGetters('covid', [
+      'getDisplayedData',
+      'status',
+      'loading',
+      'pages',
+      'limit',
+      'totalResults',
+      'firstStat',
+      'lastStat',
+    ]),
+    limitResultOptions() {
+      const values = []
+      let value = 0
+      while (value < this.totalResults) {
+        value += 5
+        values.push(value)
+      }
+      return values
+    },
+    paginationInfo() {
+      return `${this.firstStat + 1} - ${this.lastStat} of ${this.totalResults}`
+    },
+  },
+  watch: {
+    page(page) {
+      this.loadRequestedPage(page)
+      this.formatData()
+    },
   },
   async mounted() {
     this.searchDebouncer = this.$_.debounce(async (val) => {
@@ -110,15 +133,20 @@ export default {
       this.formatData()
     }, 250)
     await this.loadCovidData()
-    // this.formatData()
+    this.formatData()
   },
   methods: {
-    ...mapActions('covid', ['loadCovidData']),
+    ...mapActions('covid', [
+      'loadCovidData',
+      'setPageLimit',
+      'loadRequestedPage',
+      'loadNextPage',
+      'loadPrevPage',
+    ]),
     search(val) {
       this.searchDebouncer(val)
     },
     formatData() {
-      // Rewritethis to just reformat the entire result to convert all numeric strings to a Number
       const dataColors = this.$vuetify.theme.themes.dark.data
       const TotalCases = {
         label: 'Total Cases',
@@ -162,31 +190,13 @@ export default {
       }
 
       this.tableRows = []
-      this.getQueryResults.map((stat) => {
-        const row = { ...stat }
-        const totalCases = parseFloat(stat.total_cases.replace(/,/g, ''))
-        const activeCases = parseFloat(stat.active_cases.replace(/,/g, ''))
-        const totalRecovered = parseFloat(
-          stat.total_recovered.replace(/,/g, '')
-        )
-        const totalDeaths = parseFloat(stat.total_deaths.replace(/,/g, ''))
-        const casesPerPop = parseFloat(
-          stat.cases_per_mill_pop.replace(/,/g, '')
-        )
-        // Alternativly consider writting a custom sort function.
-        Object.entries(row).forEach(([key, value]) => {
-          value = value.replace(/,/g, '')
-          if (isNaN(value) === false) {
-            row[key] = parseFloat(value)
-          }
-        })
-        this.tableRows.push(row)
-
-        TotalCases.data.push(totalCases)
-        ActiveCases.data.push(activeCases)
-        TotalRecovered.data.push(totalRecovered)
-        TotalDeaths.data.push(totalDeaths)
-        CasesPerPop.data.push(casesPerPop)
+      this.getDisplayedData.map((stat) => {
+        this.tableRows.push(stat)
+        TotalCases.data.push(stat.cases)
+        ActiveCases.data.push(stat.active)
+        TotalRecovered.data.push(stat.recovered)
+        TotalDeaths.data.push(stat.deaths)
+        CasesPerPop.data.push(stat.casesPerOneMillion)
         chartData.labels.push(stat.country)
       })
       chartData.datasets.push(
@@ -197,10 +207,9 @@ export default {
         CasesPerPop
       )
       this.chartData = chartData
+      // TODO: filter out which rows you want to actually display and better format the headers.
       Object.keys(this.tableRows[0]).forEach((key) => {
-        if (key !== 'flag') {
-          headers.push({ text: formatHeaderText(key), value: key })
-        }
+        headers.push({ text: formatHeaderText(key), value: key })
       })
       this.tableHeaders = headers
     },
