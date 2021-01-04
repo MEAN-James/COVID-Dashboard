@@ -52,7 +52,7 @@
             <v-data-table
               :headers="tableHeaders"
               :items="tableRows"
-              :items-per-page="limit"
+              :items-per-page="itemLimit"
               :hide-default-footer="true"
               :height="400"
               fixed-header
@@ -71,7 +71,7 @@
           </v-col>
           <v-col cols="6">
             <v-select
-              v-model="limit"
+              v-model="itemLimit"
               :items="limitResultOptions"
               label="Results Per Page"
               dense
@@ -85,12 +85,11 @@
 
 <script>
 import { mapActions, mapGetters } from 'vuex'
-
+// TODO: fix the search function if possible...
 export default {
   data() {
     return {
       tabs: 'graph-tab',
-      page: 1,
       chartData: {},
       chartOptions: {},
       tableHeaders: [],
@@ -102,12 +101,31 @@ export default {
       'getDisplayedData',
       'status',
       'loading',
+      'currPage',
       'pages',
       'limit',
       'totalResults',
       'firstStat',
       'lastStat',
     ]),
+    page: {
+      get() {
+        return this.currPage
+      },
+      set(page) {
+        this.loadRequestedPage(page)
+        this.formatData()
+      },
+    },
+    itemLimit: {
+      get() {
+        return this.limit
+      },
+      set(val) {
+        this.setPageLimit(val)
+        this.formatData()
+      },
+    },
     limitResultOptions() {
       const values = []
       let value = 0
@@ -119,12 +137,6 @@ export default {
     },
     paginationInfo() {
       return `${this.firstStat + 1} - ${this.lastStat} of ${this.totalResults}`
-    },
-  },
-  watch: {
-    page(page) {
-      this.loadRequestedPage(page)
-      this.formatData()
     },
   },
   async mounted() {
